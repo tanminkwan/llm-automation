@@ -1,0 +1,57 @@
+# 환경 파일 (그라운드 룰 §6/§7)
+.env
+.env.*
+!sample.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 가상환경
+.venv/
+venv/
+env/
+ENV/
+
+# uv
+.uv-cache/
+
+# 빌드 산출물
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+
+# 테스트/커버리지
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+
+# 린트/타입체크 캐시
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# 로그
+*.log
+logs/
+
+# Docker
+.dockerignore.bak
