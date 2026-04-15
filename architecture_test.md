@@ -22,10 +22,10 @@
 
 | # | 항목 | 결정 사항 |
 |---|---|---|
-| T1 | **LLM 추론** | pl99(vLLM Qwen3-Coder, GPT-OSS) 대신 **OpenAI API** 사용. 성능 등가 모델 선택 (예: chat = `gpt-4.1` / `gpt-4o`, code = `gpt-4.1` / `o4-mini` 등 — config 로 변경 가능) |
-| T2 | **임베딩** | LLM 과 동일하게 **OpenAI Embedding API** 사용 (예: `text-embedding-3-small` / `-large`). Qdrant 컬렉션 차원은 선택한 모델에 맞춰 생성 |
-| T3 | **LLM 추상화 계층** | `LLMGateway` / `EmbeddingGateway` 모듈을 통해 호출. **백엔드(openai/vllm/azure/...) 와 모델명, baseURL, api_key 를 config(yaml + env) 로만 변경 가능** 해야 함. pl99 자체는 구축하지 않음 |
-| T4 | **인프라 토폴로지** | 단일 호스트에서 **Docker Swarm Manager + Worker 동시 수행** (single-node swarm). 노드 라벨로 Manager/Worker 역할을 분리해 production placement 규칙을 그대로 검증 |
+| T1 | **LLM 추론** | pl99(vLLM Qwen3-Coder, GPT-OSS) 대신 **OpenAI API** 사용. 코드/manifest 는 **alias 로만 참조** (`chat-llm` / `reasoning-llm`). 모델 선정 예: `chat-llm`=gpt-4o, `reasoning-llm`=o4-mini |
+| T2 | **임베딩** | **OpenAI Embedding API** 사용 (alias: `embedding`, 예: `text-embedding-3-small`). Qdrant 컬렉션 차원은 `EMBEDDING_DIM` 에 맞춰 생성 |
+| T3 | **LLM 추상화 계층** | `LLMGateway` / `EmbeddingGateway` 모듈을 통해 호출. **backend (openai/vllm/azure/...) · base_url · model · api_key 를 환경변수로만 변경 가능**. alias 이름(`chat-llm` / `reasoning-llm` / `embedding`) 은 production 과 동일 — 값만 다름. pl99 자체는 구축하지 않음. 명명 규칙은 `CLAUDE.md §5` 단일 출처 |
+| T4 | **인프라 토폴로지** | 단일 호스트에서 **Docker Swarm Manager + Worker 동시 수행** (single-node swarm, **Swarm 전용 — compose 모드 미사용**). 노드 라벨로 Manager/Worker 역할을 분리해 production placement 규칙을 그대로 검증 |
 | T5 | **컨테이너화 범위** | OpenCode(또는 대체 AI Agent CLI) 를 **제외한 모든 모듈** 은 컨테이너로 기동. OpenCode 는 호스트에 설치하고 Celery Worker 컨테이너가 subprocess 로 호출 |
 | T6 | **AI Agent CLI 추상화** | OpenCode 외 도구(Claude Code, Aider, Cursor CLI 등) 로 교체 가능하도록 `AgentRunner` 인터페이스로 분리. 실행 커맨드/인자/환경변수/결과 파싱 어댑터화 |
 | T7 | **리발소 REST API** | 실제 서버 대신 **테스트용 가상 서버(Mock)** 를 컨테이너로 기동. 동일 요청에 대해 항상 동일한 (변경 전/후) config 두 벌을 return |
@@ -137,39 +137,37 @@ class EmbeddingBackend(Protocol):
 - `VLLMChatBackend` — production 용. `base_url=http://pl99:19000/qwen` 등
 - `OpenAIEmbeddingBackend` / `BgeM3OnnxEmbeddingBackend`
 
-### 5.3 설정 예 (`config/llm.yaml`)
+### 5.3 설정 예 (`config/llm.yaml`) — production/test 동일
 
 ```yaml
 chat:
-  default: openai_gpt4o          # alias 로 호출측에서 선택
+  default: chat-llm              # 코드는 alias 만 참조
   profiles:
-    openai_gpt4o:
+    chat-llm:                    # Workflow A (코드 주석/생성)
+      backend: openai            # OpenAI 호환 (vLLM 도 동일 어댑터)
+      base_url: ${CHAT_LLM_BASE_URL}
+      api_key_env: CHAT_LLM_API_KEY
+      model: ${CHAT_LLM_MODEL}
+    reasoning-llm:               # Workflow B (분석/추론)
       backend: openai
-      base_url: https://api.openai.com/v1
-      api_key_env: OPENAI_API_KEY
-      model: gpt-4o
-    openai_code:
-      backend: openai
-      model: gpt-4.1
-    vllm_qwen:                    # production 전환용 (test 에선 미사용)
-      backend: openai             # vLLM 은 OpenAI 호환 API
-      base_url: http://pl99:19000/qwen
-      model: qwen3-coder-30b
+      base_url: ${REASONING_LLM_BASE_URL}
+      api_key_env: REASONING_LLM_API_KEY
+      model: ${REASONING_LLM_MODEL}
 
 embedding:
-  default: openai_small
+  default: embedding
   profiles:
-    openai_small:
+    embedding:
       backend: openai
-      model: text-embedding-3-small
-      dim: 1536
-    bge_m3:
-      backend: http
-      url: http://pl99:19000/embed/
-      dim: 1024
+      base_url: ${EMBEDDING_BASE_URL}
+      api_key_env: EMBEDDING_API_KEY
+      model: ${EMBEDDING_MODEL}
+      dim: ${EMBEDDING_DIM}
 ```
 
-> 호출측은 항상 alias(`openai_gpt4o` 등) 로 요청 → 백엔드/모델 교체 시 코드 변경 없이 yaml 만 수정.
+- 호출측은 항상 alias(`chat-llm` / `reasoning-llm` / `embedding`) 로 요청. backend/모델 교체는 **환경변수만** 수정.
+- alias 이름은 production 과 동일 — prod ↔ test 에서 코드/yaml 한 벌 유지.
+- 표준 환경변수 목록은 `CLAUDE.md §5` 와 본 문서 §12 에서 단일 출처 관리.
 
 ### 5.4 Qdrant 컬렉션 차원
 
@@ -341,9 +339,8 @@ llm-automation/
   architecture_v2.md
   architecture_test.md            # ← 본 문서
   docker/
-    docker-stack.test.yml         # swarm stack
-    docker-compose.test.yml       # 로컬 단일 노드용 (옵션)
-    .env.example
+    docker-stack.test.yml         # swarm stack (단일 manifest, Swarm 전용)
+    sample.env                    # 그라운드 룰 §6 — 키 목록·예시값
   config/
     llm.yaml                      # §5.3
     agent.yaml                    # AgentRunner 선택/옵션
@@ -368,42 +365,84 @@ llm-automation/
 
 ---
 
-## 11. 부팅 절차
+## 11. 부팅 절차 (Swarm 전용)
 
 ```bash
+# 0. .env 준비 (그라운드 룰 §6)
+cp sample.env .env
+$EDITOR .env                 # OPENAI_API_KEY 등 채움
+
 # 1. swarm 초기화 + 단일 노드에 manager/worker 라벨 부여
 ./scripts/init-swarm.sh
 
-# 2. 시크릿 등록
-echo "$OPENAI_API_KEY" | docker secret create openai_api_key -
+# 2. 시크릿 등록 (test 전용 source secret)
+docker secret create openai_api_key - < <(grep ^OPENAI_API_KEY= .env | cut -d= -f2-)
 
 # 3. 스택 배포
+set -a; . ./.env; set +a       # docker stack deploy 는 .env 자동보간 약함
 docker stack deploy -c docker/docker-stack.test.yml llmauto
 
 # 4. 시딩 (one-shot service 가 자동 실행 후 종료)
 #    Gitea 초기 repo / Qdrant 컬렉션 / RAG 코퍼스
 
 # 5. 동작 확인
-curl -X POST http://localhost:8080/health
+curl http://localhost:8080/health
 open http://localhost:5555    # Flower
 open http://localhost:3000    # Gitea
 ```
 
 ---
 
-## 12. Production ↔ Test 차이 요약
+## 12. Production ↔ Test 매핑
+
+### 12.0 모델 등가성 원칙 (Model Equivalence Principle)
+
+테스트 환경은 production 의 AI 모델 각각에 대해 **유사한 성능 특성을 가진 다른 모델로 대체** 한다.
+
+- **목적**: GPU/내부 인프라(pl99) 없이도 production 과 **행위적·품질적으로 동등한 검증** 을 수행한다.
+- **수단**: production 의 자체 호스팅 모델(vLLM Qwen3-Coder 30B, GPT-OSS 130B, bge-m3 ONNX) 을 OpenAI 의 동급 모델로 1:1 치환한다.
+- **불변성**: alias 이름(`chat-llm` / `reasoning-llm` / `embedding`), 호출 인터페이스, 환경변수 키, manifest 구조는 production 과 **완전히 동일**. 차이는 *값* 으로만 흡수한다.
+- **선정 기준**:
+  - `chat-llm` — 코드 이해/생성 능력. production 의 *Qwen3-Coder 30B* (코드 특화 30B chat 모델) 와 비교 가능한 OpenAI 모델 (예: `gpt-4o` / `gpt-4.1`).
+  - `reasoning-llm` — 분석·추론 능력. production 의 *GPT-OSS 130B* (대형 추론 지향 모델) 와 비교 가능한 OpenAI **추론 모델** (예: `o4-mini` / `o3-mini`).
+  - `embedding` — 다국어/장문 임베딩 품질·차원. production 의 *bge-m3* (1024-dim 다국어) 와 등가 영역의 OpenAI 임베딩 (예: `text-embedding-3-small` 1536-dim).
+- **수용 차이**:
+  - 임베딩 차원이 다를 수 있다(1024 ↔ 1536) → Qdrant 컬렉션은 `EMBEDDING_DIM` 에 맞춰 생성, 모델 변경 시 컬렉션 재생성.
+  - 토크나이저/응답 latency/비용 분포는 다를 수 있음 → 기능 검증에는 영향 없음.
+- **재선정 정책**: 더 적합한 모델이 등장하면 `sample.env` 의 `*_MODEL` 기본값만 갱신, 코드 변경 없음.
+
+### 12.1 인프라/도구 차이 요약
 
 | 항목 | Production (`v2`) | Test |
 |---|---|---|
 | 노드 수 | 6 (pl99 + ar41~43 + ar51~52) | 1 (single-node Swarm, manager+worker 겸용) |
-| Chat LLM | vLLM Qwen3-Coder 30B / GPT-OSS 130B @ pl99 | **OpenAI API** (모델 alias 로 선택) |
-| Embedding | bge-m3 ONNX @ pl99 | **OpenAI Embedding API** |
-| LLM 호출 | nginx(pl99:19000) 경유 | LLMGateway → OpenAI 직접 |
-| 추상화 | (없음, 직접 호출) | **LLMGateway / EmbeddingGateway / AgentRunner** |
-| 리발소 | 실제 REST API @ ar51 | **ribalso-mock** (고정 응답) |
+| 오케스트레이션 | Docker Swarm | Docker Swarm (manifest 동일) |
+| `chat-llm` | vLLM Qwen3-Coder 30B @ `pl99:19000/qwen` | OpenAI (예: gpt-4o) |
+| `reasoning-llm` | vLLM GPT-OSS 130B @ `pl99:19000/gpt` | OpenAI (예: o4-mini) |
+| `embedding` | bge-m3 ONNX @ `pl99:19000/embed` | OpenAI text-embedding-3-small |
+| 추상화 | LLMGateway (백엔드 = vllm/http) | LLMGateway (백엔드 = openai) — **alias·env 명 동일** |
+| 리발소 | 실제 REST API @ ar51 | `ribalso-mock` (고정 응답) |
 | Git 원격 | 사내 Gitea | 로컬 Gitea 컨테이너 |
 | OpenCode | host 설치 | host 설치 (동일) |
 | 그 외 | 컨테이너 | 컨테이너 (동일) |
+
+### 12.2 표준 환경변수 매핑 (단일 출처)
+
+> 코드/manifest 는 좌측 `변수` 만 참조한다. 값만 환경별로 다름.
+
+| 변수 | Production 값 | Test 값 |
+|---|---|---|
+| `CHAT_LLM_BASE_URL` | `http://pl99:19000/qwen` | `https://api.openai.com/v1` |
+| `CHAT_LLM_MODEL` | `qwen3-coder-30b` | `gpt-4o` (예) |
+| `CHAT_LLM_API_KEY` | (빈 값 또는 vLLM 키) | OpenAI 키 |
+| `REASONING_LLM_BASE_URL` | `http://pl99:19000/gpt` | `https://api.openai.com/v1` |
+| `REASONING_LLM_MODEL` | `gpt-oss-130b` | `o4-mini` (예) |
+| `REASONING_LLM_API_KEY` | (빈 값) | OpenAI 키 |
+| `EMBEDDING_BASE_URL` | `http://pl99:19000/embed` | `https://api.openai.com/v1` |
+| `EMBEDDING_MODEL` | `bge-m3` | `text-embedding-3-small` (예) |
+| `EMBEDDING_API_KEY` | (빈 값) | OpenAI 키 |
+| `EMBEDDING_DIM` | `1024` | `1536` (모델에 맞춰) |
+| `OPENAI_API_KEY` | — (사용 안 함) | **test 전용 source secret**. stack.yml 의 `environment:` 또는 Swarm secret 으로 위 `*_API_KEY` 에 주입 |
 
 ---
 
