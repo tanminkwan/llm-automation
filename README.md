@@ -68,39 +68,63 @@ http.m 설정 파일 변경이 감지되면 dev/stage/prod 3개 환경의 config
 
 ## 아키텍처
 
+### 전체 흐름
+
+```mermaid
+flowchart TD
+    GH[Gitea<br/>push webhook]
+
+    GH --> FL[Flask :8080<br/>HMAC 검증 · work_type 판별]
+
+    FL -->|Java 변경| CQ[(comment_queue)]
+    FL -->|http.m 변경| HQ[(configaudit_queue)]
+
+    CQ --> WA[Celery Worker<br/>코드 주석]
+    HQ --> WB[Celery Worker<br/>Config 분석]
+
+    WA -->|AgentRunner| OC[OpenCode CLI<br/>chat-llm]
+    OC -->|tool call| RM[RAG MCP :9001]
+    RM -->|embed| EMB[Embedding API]
+    RM -->|검색| QD[(Qdrant<br/>벡터 DB)]
+
+    WB -->|Agent Loop| AG[Python Agent<br/>reasoning-llm]
+    AG -->|get_config_context| WM[ConfigAudit MCP :9002]
+    WM -->|3-way diff| RB[leebalso API]
+
+    WA -->|commit push| GH
+    WB --> RP[Markdown 리포트]
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  Gitea (push webhook)                                            │
-└──────────┬───────────────────────────────────────────────────────┘
-           │
-     ┌─────▼──────┐
-     │   Flask     │  HMAC 검증 → work_type 판별
-     │   :8080     │
-     └──┬─────┬───┘
-        │     │
-   comment  configaudit
-   _queue    _queue
-        │     │
-  ┌─────▼──┐ ┌▼───────────┐
-  │ Celery │ │   Celery    │
-  │comment │ │ configaudit │
-  └───┬────┘ └──────┬──────┘
-      │             │
-      │ AgentRunner │ Agent Loop
-      │             │
-  ┌───▼────┐  ┌─────▼────────┐
-  │OpenCode│  │ConfigAudit   │
-  │  CLI   │  │   MCP :9002  │───► leebalso API (3-way diff)
-  └───┬────┘  └──────┬───────┘
-      │              │
-  ┌───▼────┐    ┌────▼────┐
-  │RAG MCP │    │   LLM   │
-  │ :9001  │    │reasoning│
-  └───┬────┘    └─────────┘
-      │
-  ┌───▼────┐
-  │ Qdrant │  ◄── Embedding (벡터 검색)
-  └────────┘
+
+### 서비스 토폴로지
+
+```mermaid
+graph LR
+    subgraph HOST[Single Host — Docker Swarm]
+        subgraph MGR[Manager 라벨]
+            RD[(Redis<br/>Celery Broker)]
+            QD[(Qdrant<br/>벡터 DB)]
+            FW[Flower :5555]
+            GT[Gitea :3000]
+        end
+        subgraph WKR[Worker 라벨]
+            FL[Flask :8080]
+            CW1[celery-comment]
+            CW2[celery-configaudit]
+            RM[RAG MCP :9001]
+            WM[ConfigAudit MCP :9002]
+            RB[leebalso-mock :9100]
+        end
+        OC[OpenCode CLI<br/>Host process]
+    end
+
+    OAI[OpenAI API<br/>api.openai.com]
+
+    CW1 --> RM
+    CW2 --> WM
+    WM --> RB
+    RM --> QD
+    CW1 & CW2 & RM --> OAI
+    OC --> OAI
 ```
 
 ## 디렉터리 구조
