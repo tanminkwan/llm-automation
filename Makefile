@@ -6,7 +6,7 @@
 MEMBERS := libs/_template libs/llm-gateway
 # 후속 phase 마다 멤버 추가:
 # MEMBERS += libs/agent-runner
-# MEMBERS += services/ribalso-mock services/rag-mcp ...
+# MEMBERS += services/leebalso-mock services/rag-mcp ...
 
 .PHONY: help sync test-all coverage-all lint-all format-all build-all image-all clean-all
 
