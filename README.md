@@ -207,4 +207,4 @@ make -C services/leebalso-mock coverage
 
 ## 라이선스
 
-Private repository.
+[MIT License](LICENSE)
