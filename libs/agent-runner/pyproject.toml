@@ -1,0 +1,51 @@
+[project]
+name = "agent-runner"
+version = "0.1.0"
+description = "AI Agent CLI 추상화 — AgentRunner Protocol 기반 subprocess 실행 (OpenCode/Claude Code 등)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.7",
+  "pydantic-settings>=2.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_runner"]
+
+# ─── 컨테이너 내부(tester stage) 에서도 루트 워크스페이스 없이
+#     일관된 린트/타입체크가 되도록, 본 모듈 pyproject 에도 동일 설정을 고정.
+#     (CLAUDE.md §1 — 컨테이너 단위 독립성)
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "N", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = ["S101"]
+"**/conftest.py" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers --strict-config"
+asyncio_mode = "auto"
+testpaths = ["tests"]

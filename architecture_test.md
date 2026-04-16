@@ -61,7 +61,7 @@
 | `celery-worker-configaudit` | 자체 빌드 (replicas=1) | - | worker | Agent loop |
 | `rag-mcp` | 자체 빌드 | 9001 | worker | LLMGateway/EmbeddingGateway 사용 |
 | `configaudit-mcp` | 자체 빌드 | 9002 | worker | 리발소-mock 호출 |
-| `ribalso-mock` | 자체 빌드 (FastAPI) | 9100 | worker | 가상 리발소 REST API |
+| `leebalso-mock` | 자체 빌드 (FastAPI) | 9100 | worker | 가상 리발소 REST API |
 | `redis` | `redis:7` | 6379 | manager | Celery broker/result |
 | `qdrant` | `qdrant/qdrant:latest` | 6333 | manager | 벡터 DB |
 | `flower` | `mher/flower` | 5555 | manager | Celery 모니터링 |
@@ -216,7 +216,7 @@ class AgentRunner(Protocol):
 
 ### 7.3 픽스처
 
-- `ribalso-mock/fixtures/case-001/{dev,stage,prod}.{before,after}.httpm` 형태로 저장.
+- `leebalso-mock/fixtures/case-001/{dev,stage,prod}.{before,after}.httpm` 형태로 저장.
 - 쿼리 파라미터 `?case=case-001` 등으로 시나리오 전환 가능 (기본 케이스 1개부터 시작).
 - 결정성 보장: 입력이 같으면 응답은 비트단위로 동일.
 
@@ -352,7 +352,7 @@ llm-automation/
     rag_mcp/
     configaudit_mcp/
   services/
-    ribalso-mock/                 # §7
+    leebalso-mock/                 # §7
       app/
       fixtures/case-001/...
     rag-seeder/                   # §8
@@ -421,7 +421,7 @@ open http://localhost:3000    # Gitea
 | `reasoning-llm` | vLLM GPT-OSS 130B @ `pl99:19000/gpt` | OpenAI (예: o4-mini) |
 | `embedding` | bge-m3 ONNX @ `pl99:19000/embed` | OpenAI text-embedding-3-small |
 | 추상화 | LLMGateway (백엔드 = vllm/http) | LLMGateway (백엔드 = openai) — **alias·env 명 동일** |
-| 리발소 | 실제 REST API @ ar51 | `ribalso-mock` (고정 응답) |
+| 리발소 | 실제 REST API @ ar51 | `leebalso-mock` (고정 응답) |
 | Git 원격 | 사내 Gitea | 로컬 Gitea 컨테이너 |
 | OpenCode | host 설치 | host 설치 (동일) |
 | 그 외 | 컨테이너 | 컨테이너 (동일) |
