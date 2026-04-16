@@ -3,9 +3,9 @@
 # 새 모듈 추가 시 MEMBERS 변수에 추가 (그라운드 룰 §1, ②)
 # ============================================================
 
-MEMBERS := libs/_template
+MEMBERS := libs/_template libs/llm-gateway
 # 후속 phase 마다 멤버 추가:
-# MEMBERS += libs/llm-gateway libs/agent-runner
+# MEMBERS += libs/agent-runner
 # MEMBERS += services/ribalso-mock services/rag-mcp ...
 
 .PHONY: help sync test-all coverage-all lint-all format-all build-all image-all clean-all
