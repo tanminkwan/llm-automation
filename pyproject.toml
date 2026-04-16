@@ -6,9 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 
 [tool.uv.workspace]
-members = ["libs/*"]
-# 후속 phase 마다 추가:
-# members = ["libs/*", "services/*"]
+members = ["libs/*", "services/*"]
 
 [dependency-groups]
 dev = [

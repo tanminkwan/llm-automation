@@ -1,0 +1,7 @@
+# dev environment - before change
+ServerRoot=/opt/httpd
+Listen 8080
+DocumentRoot=/var/www/dev
+LogLevel warn
+MaxClients 150
+Timeout 30
