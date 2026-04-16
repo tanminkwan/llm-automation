@@ -405,9 +405,9 @@ open http://localhost:3000    # Gitea
 - **선정 기준**:
   - `chat-llm` — 코드 이해/생성 능력. production 의 *Qwen3-Coder 30B* (코드 특화 30B chat 모델) 와 비교 가능한 OpenAI 모델 (예: `gpt-4o` / `gpt-4.1`).
   - `reasoning-llm` — 분석·추론 능력. production 의 *GPT-OSS 130B* (대형 추론 지향 모델) 와 비교 가능한 OpenAI **추론 모델** (예: `o4-mini` / `o3-mini`).
-  - `embedding` — 다국어/장문 임베딩 품질·차원. production 의 *bge-m3* (1024-dim 다국어) 와 등가 영역의 OpenAI 임베딩 (예: `text-embedding-3-small` 1536-dim).
+  - `embedding` — 다국어/장문 임베딩 품질·차원. production 의 *bge-m3* (1024-dim 다국어) 와 등가 영역의 OpenAI 임베딩 (예: `text-embedding-3-small` dimensions=1024).
 - **수용 차이**:
-  - 임베딩 차원이 다를 수 있다(1024 ↔ 1536) → Qdrant 컬렉션은 `EMBEDDING_DIM` 에 맞춰 생성, 모델 변경 시 컬렉션 재생성.
+  - 임베딩 차원은 prod/test 모두 1024 로 통일 (OpenAI `text-embedding-3-small` 은 `dimensions` 파라미터로 1024 지정). Qdrant 컬렉션은 `EMBEDDING_DIM=1024` 로 생성.
   - 토크나이저/응답 latency/비용 분포는 다를 수 있음 → 기능 검증에는 영향 없음.
 - **재선정 정책**: 더 적합한 모델이 등장하면 `sample.env` 의 `*_MODEL` 기본값만 갱신, 코드 변경 없음.
 
@@ -441,7 +441,7 @@ open http://localhost:3000    # Gitea
 | `EMBEDDING_BASE_URL` | `http://pl99:19000/embed` | `https://api.openai.com/v1` |
 | `EMBEDDING_MODEL` | `bge-m3` | `text-embedding-3-small` (예) |
 | `EMBEDDING_API_KEY` | (빈 값) | OpenAI 키 |
-| `EMBEDDING_DIM` | `1024` | `1536` (모델에 맞춰) |
+| `EMBEDDING_DIM` | `1024` | `1024` (dimensions 파라미터로 통일) |
 | `OPENAI_API_KEY` | — (사용 안 함) | **test 전용 source secret**. stack.yml 의 `environment:` 또는 Swarm secret 으로 위 `*_API_KEY` 에 주입 |
 
 ---
