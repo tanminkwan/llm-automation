@@ -1,0 +1,113 @@
+# ============================================================
+# llm-automation — 테스트 환경 Docker Swarm Stack
+# single-node Swarm 전용 (compose 모드 미사용)
+# architecture_test.md §3, §11 참조
+# ============================================================
+# 사용법:
+#   set -a; . ./infra/sample.env; set +a
+#   docker stack deploy -c infra/docker-stack.test.yml llmauto
+# ============================================================
+
+version: "3.9"
+
+services:
+  # ─── Manager 라벨 서비스 (인프라) ─────────────────────────
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == manager
+      replicas: 1
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == manager
+      replicas: 1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  flower:
+    image: mher/flower
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == manager
+      replicas: 1
+    depends_on:
+      - redis
+
+  gitea:
+    image: gitea/gitea:latest
+    ports:
+      - "3000:3000"
+      - "2222:22"
+    volumes:
+      - gitea-data:/data
+    environment:
+      - GITEA__database__DB_TYPE=sqlite3
+      - GITEA__server__ROOT_URL=http://localhost:3000
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == manager
+      replicas: 1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/v1/version || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ─── Worker 라벨 서비스 (애플리케이션) ────────────────────
+
+  leebalso-mock:
+    image: leebalso-mock:latest
+    ports:
+      - "9100:9100"
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == worker
+      replicas: 1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9100/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── 후속 Phase 에서 추가될 서비스 (참고) ─────────────────
+  # rag-mcp:        (Phase 3) — 9001
+  # rag-seeder:     (Phase 3) — one-shot
+  # configaudit-mcp:(Phase 4) — 9002
+  # flask-webhook:  (Phase 5) — 8080
+  # celery-comment: (Phase 5)
+  # celery-configaudit: (Phase 5)
+
+volumes:
+  redis-data:
+  qdrant-data:
+  gitea-data:

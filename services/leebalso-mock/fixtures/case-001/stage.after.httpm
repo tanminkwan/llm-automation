@@ -1,0 +1,8 @@
+# stage environment - after change
+ServerRoot=/opt/httpd
+Listen 8080
+DocumentRoot=/var/www/stage
+LogLevel info
+MaxClients 250
+Timeout 45
+KeepAlive On

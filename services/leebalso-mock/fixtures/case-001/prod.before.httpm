@@ -1,0 +1,7 @@
+# prod environment - before change
+ServerRoot=/opt/httpd
+Listen 8080
+DocumentRoot=/var/www/prod
+LogLevel error
+MaxClients 300
+Timeout 30

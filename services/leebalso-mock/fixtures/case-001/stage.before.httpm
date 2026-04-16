@@ -1,0 +1,7 @@
+# stage environment - before change
+ServerRoot=/opt/httpd
+Listen 8080
+DocumentRoot=/var/www/stage
+LogLevel warn
+MaxClients 200
+Timeout 30
