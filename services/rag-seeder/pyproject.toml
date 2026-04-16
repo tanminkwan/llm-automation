@@ -1,0 +1,58 @@
+[project]
+name = "rag-seeder"
+version = "0.1.0"
+description = "RAG 코퍼스 시딩 — corpus YAML → 임베딩 → Qdrant upsert (one-shot)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.7",
+  "pydantic-settings>=2.4",
+  "pyyaml>=6.0",
+  "qdrant-client>=1.9",
+  "llm-gateway",
+]
+
+[project.scripts]
+rag-seeder = "rag_seeder.cli:main"
+
+[tool.uv.sources]
+llm-gateway = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rag_seeder"]
+
+# ─── 컨테이너 단위 독립성 (CLAUDE.md §1) ───────────────────
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "N", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = ["S101"]
+"**/conftest.py" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers --strict-config"
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -163,7 +163,7 @@ llm-automation/
 | 0 | 워크스페이스 표준 + `_template` | ✅ 완료 |
 | 1 | `libs/llm-gateway`, `libs/agent-runner` | ✅ 완료 |
 | 2 | `infra/`, `services/leebalso-mock` | ✅ 완료 |
-| 3 | `services/rag-seeder`, `services/rag-mcp` | |
+| 3 | `services/rag-seeder`, `services/rag-mcp` | ✅ 완료 |
 | 4 | `services/configaudit-mcp` | |
 | 5 | `services/flask-webhook`, `services/celery-comment`, `services/celery-configaudit` | |
 | 6 | `e2e/` 통합 테스트 | |
