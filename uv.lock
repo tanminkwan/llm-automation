@@ -4,9 +4,25 @@ requires-python = ">=3.12"
 
 [manifest]
 members = [
+    "agent-runner",
     "llm-automation",
     "llm-gateway",
     "seed-template",
+]
+
+[[package]]
+name = "agent-runner"
+version = "0.1.0"
+source = { editable = "libs/agent-runner" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.7" },
+    { name = "pydantic-settings", specifier = ">=2.4" },
 ]
 
 [[package]]
