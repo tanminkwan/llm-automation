@@ -141,9 +141,11 @@ llm-automation/
 │   └── agent-runner/                  #   AI Agent CLI 추상화
 │
 ├── services/                          # 컨테이너화 서비스
-│   └── leebalso-mock/                 #   리발소 REST API Mock
-│   # (후속) rag-seeder, rag-mcp, configaudit-mcp,
-│   #        flask-webhook, celery-comment, celery-configaudit
+│   ├── leebalso-mock/                 #   리발소 REST API Mock
+│   ├── rag-seeder/                    #   RAG 코퍼스 시딩 (one-shot)
+│   ├── rag-mcp/                       #   RAG 벡터 검색 MCP
+│   └── configaudit-mcp/               #   Config 3-way diff MCP
+│   # (후속) flask-webhook, celery-comment, celery-configaudit
 │
 ├── infra/                             # Docker Swarm 인프라
 │   ├── docker-stack.test.yml          #   Swarm stack manifest
@@ -164,7 +166,7 @@ llm-automation/
 | 1 | `libs/llm-gateway`, `libs/agent-runner` | ✅ 완료 |
 | 2 | `infra/`, `services/leebalso-mock` | ✅ 완료 |
 | 3 | `services/rag-seeder`, `services/rag-mcp` | ✅ 완료 |
-| 4 | `services/configaudit-mcp` | |
+| 4 | `services/configaudit-mcp` | ✅ 완료 |
 | 5 | `services/flask-webhook`, `services/celery-comment`, `services/celery-configaudit` | |
 | 6 | `e2e/` 통합 테스트 | |
 
