@@ -144,8 +144,10 @@ llm-automation/
 │   ├── leebalso-mock/                 #   리발소 REST API Mock
 │   ├── rag-seeder/                    #   RAG 코퍼스 시딩 (one-shot)
 │   ├── rag-mcp/                       #   RAG 벡터 검색 MCP
-│   └── configaudit-mcp/               #   Config 3-way diff MCP
-│   # (후속) flask-webhook, celery-comment, celery-configaudit
+│   ├── configaudit-mcp/               #   Config 3-way diff MCP
+│   ├── flask-webhook/                 #   Gitea webhook 수신 (Flask)
+│   ├── celery-comment/                #   코드 주석 자동화 Worker
+│   └── celery-configaudit/            #   Config 분석 Agent Worker
 │
 ├── infra/                             # Docker Swarm 인프라
 │   ├── docker-stack.test.yml          #   Swarm stack manifest
@@ -167,7 +169,7 @@ llm-automation/
 | 2 | `infra/`, `services/leebalso-mock` | ✅ 완료 |
 | 3 | `services/rag-seeder`, `services/rag-mcp` | ✅ 완료 |
 | 4 | `services/configaudit-mcp` | ✅ 완료 |
-| 5 | `services/flask-webhook`, `services/celery-comment`, `services/celery-configaudit` | |
+| 5 | `services/flask-webhook`, `services/celery-comment`, `services/celery-configaudit` | ✅ 완료 |
 | 6 | `e2e/` 통합 테스트 | |
 
 ## 빠른 시작 (테스트 환경)
