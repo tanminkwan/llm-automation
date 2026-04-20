@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir uv
 WORKDIR /app
 
 FROM base AS builder
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 COPY src/ src/
 RUN uv pip install --system . && \
     uv build --wheel
@@ -22,4 +22,4 @@ WORKDIR /app
 COPY --from=builder /app/dist/*.whl /tmp/
 COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
 RUN pip install --no-cache-dir /tmp/*.whl && rm -rf /tmp/*.whl
-CMD ["celery", "-A", "celery_comment.app:celery_app", "worker", "-Q", "comment_queue", "--loglevel=info"]
+CMD ["python", "-m", "celery", "-A", "celery_comment.worker:celery_app", "worker", "-Q", "comment_queue", "--loglevel=info"]

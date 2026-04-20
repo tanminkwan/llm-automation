@@ -35,8 +35,8 @@ def process_configaudit(
         max_iterations=settings.agent_max_iterations,
     )
 
-    # case 는 work_id 기반 기본값 사용
-    case = work_id
+    # work_id 형식 "<repo>:<case>" 에서 case 부분만 추출 (없으면 default)
+    case = work_id.rsplit(":", 1)[-1] if ":" in work_id else settings.configaudit_default_case
     report = agent.run(work_id=work_id, case=case)
 
     output_dir = Path(settings.report_output_dir)

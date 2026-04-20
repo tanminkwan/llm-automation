@@ -16,3 +16,8 @@ class CommentSettings(BaseSettings):
     git_client: str = "subprocess"  # "subprocess" | "fixture"
     fixture_source_dir: str = "/fixtures/source"
     fixture_result_dir: str = "/fixtures/results"
+
+    chat_llm_base_url: str = "https://api.openai.com/v1"
+    chat_llm_model: str = "gpt-4o"
+    chat_llm_api_key: str = ""
+    chat_llm_timeout_seconds: int = 120

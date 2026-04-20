@@ -6,14 +6,18 @@ class TestPublicAPI:
 
     def test_all_exports(self) -> None:
         from celery_comment import (
+            AgentRunResult,
             CommentResult,
             CommentSettings,
+            DirectLLMAgent,
             FixtureGitClient,
             GitClient,
             SubprocessGitClient,
             TaskPayload,
+            build_agent_executor,
             build_git_client,
             build_prompt,
+            build_worker_app,
             celery_app,
             create_celery_app,
             create_celery_task,
@@ -22,14 +26,18 @@ class TestPublicAPI:
 
         assert all(
             [
+                AgentRunResult,
                 CommentResult,
                 CommentSettings,
+                DirectLLMAgent,
                 FixtureGitClient,
                 GitClient,
                 SubprocessGitClient,
                 TaskPayload,
+                build_agent_executor,
                 build_git_client,
                 build_prompt,
+                build_worker_app,
                 celery_app,
                 create_celery_app,
                 create_celery_task,

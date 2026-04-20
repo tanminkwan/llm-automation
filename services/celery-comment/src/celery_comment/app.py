@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from celery import Celery  # type: ignore[import-untyped]
 
-from .factory import build_git_client
+from .factory import build_agent_executor, build_git_client
 from .settings import CommentSettings
 
 
@@ -20,20 +20,20 @@ def create_celery_app(settings: CommentSettings | None = None) -> Celery:
     return app
 
 
-# pragma: no cover — 운영 진입점
-def _build_app() -> Celery:  # pragma: no cover
-    """운영용 Celery app 조립 — GIT_CLIENT 값에 따라 구현체 선택."""
+def build_worker_app() -> Celery:
+    """운영용 Celery app 조립 — env 기반 GitClient + AgentExecutor 주입.
+
+    워커 부팅 시점에만 호출된다 (``celery_comment.worker`` 모듈에서 사용).
+    테스트에서는 import 부작용이 없도록 별도 모듈로 분리했다.
+    """
     from .task import create_celery_task
 
     settings = CommentSettings()
     app = create_celery_app(settings)
-    git_client = build_git_client(settings)
-    # AgentRunner 는 host subprocess — 여기서는 stub
-    # 실제 연동은 E2E Phase 에서 완성
     create_celery_task(
         app,
-        git_client=git_client,
-        agent=None,
+        git_client=build_git_client(settings),
+        agent=build_agent_executor(settings),
         rag_mcp_url=settings.rag_mcp_url,
         work_dir_base=settings.comment_work_dir,
     )
