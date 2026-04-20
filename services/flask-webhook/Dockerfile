@@ -8,12 +8,12 @@ WORKDIR /app
 
 # Stage 2: builder — 의존성 설치 + wheel 빌드
 FROM base AS builder
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 COPY src/ src/
 COPY --from=trigger-core-wheel /wheels/ /wheels/
 RUN uv pip install --system /wheels/*.whl && \
-    uv pip install --system . && \
-    uv build --wheel
+    pip install --no-cache-dir --no-deps . && \
+    uv build --no-sources --wheel
 
 # Stage 3: tester — 테스트 실행용
 FROM builder AS tester

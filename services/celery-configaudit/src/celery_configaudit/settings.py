@@ -15,3 +15,4 @@ class CeleryConfigAuditSettings(BaseSettings):
     reasoning_llm_timeout_seconds: int = 60
     report_output_dir: str = "/tmp/celery-configaudit/reports"  # noqa: S108
     agent_max_iterations: int = 5
+    configaudit_default_case: str = "case-001"

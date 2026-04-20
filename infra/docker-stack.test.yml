@@ -22,7 +22,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == manager
+          - node.labels.node-role.manager == true
       replicas: 1
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -39,10 +39,10 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == manager
+          - node.labels.node-role.manager == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333' || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -56,7 +56,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == manager
+          - node.labels.node-role.manager == true
       replicas: 1
     depends_on:
       - redis
@@ -74,10 +74,10 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == manager
+          - node.labels.node-role.manager == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/v1/version || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3000' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -91,10 +91,10 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == worker
+          - node.labels.node-role.worker == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9100/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:9100/health').read()\" || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -105,6 +105,12 @@ services:
     ports:
       - "9001:9001"
     environment:
+      - CHAT_LLM_BASE_URL=${CHAT_LLM_BASE_URL}
+      - CHAT_LLM_MODEL=${CHAT_LLM_MODEL}
+      - CHAT_LLM_API_KEY=${OPENAI_API_KEY}
+      - REASONING_LLM_BASE_URL=${REASONING_LLM_BASE_URL}
+      - REASONING_LLM_MODEL=${REASONING_LLM_MODEL}
+      - REASONING_LLM_API_KEY=${OPENAI_API_KEY}
       - EMBEDDING_BASE_URL=${EMBEDDING_BASE_URL}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL}
       - EMBEDDING_API_KEY=${OPENAI_API_KEY}
@@ -115,10 +121,10 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == worker
+          - node.labels.node-role.worker == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9001/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:9001/health').read()\" || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -129,16 +135,16 @@ services:
     ports:
       - "9002:9002"
     environment:
-      - LEEBALSO_MOCK_URL=http://leebalso-mock:9100
+      - LEEBALSO_BASE_URL=http://leebalso-mock:9100
     depends_on:
       - leebalso-mock
     deploy:
       placement:
         constraints:
-          - node.labels.role == worker
+          - node.labels.node-role.worker == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9002/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:9002/health').read()\" || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -159,10 +165,10 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == worker
+          - node.labels.node-role.worker == true
       replicas: 1
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()\" || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -170,7 +176,7 @@ services:
   # ─── Phase 5: Comment Worker (Phase 6 에서 FixtureGitClient 지원) ──
   celery-comment:
     image: celery-comment:latest
-    command: ["celery", "-A", "celery_comment.app:celery_app", "worker", "-Q", "comment_queue", "-l", "info"]
+    command: ["python", "-m", "celery", "-A", "celery_comment.worker:celery_app", "worker", "-Q", "comment_queue", "-l", "info"]
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
@@ -185,22 +191,24 @@ services:
       - CHAT_LLM_BASE_URL=${CHAT_LLM_BASE_URL}
       - CHAT_LLM_MODEL=${CHAT_LLM_MODEL}
       - CHAT_LLM_API_KEY=${OPENAI_API_KEY}
+      - CHAT_LLM_TIMEOUT_SECONDS=${CHAT_LLM_TIMEOUT_SECONDS:-120}
     volumes:
-      - fixture-source:/fixtures/source
-      - fixture-results:/fixtures/results
+      - ${FIXTURE_SOURCE_DIR}:${FIXTURE_SOURCE_DIR}
+      - ${FIXTURE_RESULT_DIR}:${FIXTURE_RESULT_DIR}
+      - ${COMMENT_WORK_DIR}:${COMMENT_WORK_DIR}
     depends_on:
       - redis
       - rag-mcp
     deploy:
       placement:
         constraints:
-          - node.labels.role == worker
+          - node.labels.node-role.worker == true
       replicas: 1
 
   # ─── Phase 5: ConfigAudit Worker ─────────────────────────
   celery-configaudit:
     image: celery-configaudit:latest
-    command: ["celery", "-A", "celery_configaudit.app:celery_app", "worker", "-Q", "configaudit_queue", "-l", "info"]
+    command: ["python", "-m", "celery", "-A", "celery_configaudit.worker:celery_app", "worker", "-Q", "configaudit_queue", "-l", "info"]
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
@@ -210,20 +218,17 @@ services:
       - REASONING_LLM_MODEL=${REASONING_LLM_MODEL}
       - REASONING_LLM_API_KEY=${OPENAI_API_KEY}
     volumes:
-      - report-data:/reports
+      - ${REPORT_OUTPUT_DIR}:${REPORT_OUTPUT_DIR}
     depends_on:
       - redis
       - configaudit-mcp
     deploy:
       placement:
         constraints:
-          - node.labels.role == worker
+          - node.labels.node-role.worker == true
       replicas: 1
 
 volumes:
   redis-data:
   qdrant-data:
   gitea-data:
-  fixture-source:
-  fixture-results:
-  report-data:
