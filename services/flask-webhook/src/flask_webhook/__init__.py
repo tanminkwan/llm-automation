@@ -1,20 +1,10 @@
-"""flask-webhook — Gitea webhook 수신 서비스."""
+"""flask-webhook — HTTP webhook 어댑터.
+
+핵심 도메인(TriggerEvent/Source/Dispatcher) 은 ``trigger_core`` 에서 제공.
+본 서비스는 Flask 라우트 + Settings 만 정의한다.
+"""
 
 from .app import create_app
-from .dedup import DeliveryCache
-from .hmac_verify import verify_signature
-from .models import PushCommit, WebhookPayload
-from .router import WorkType, classify_files, dispatch
 from .settings import WebhookSettings
 
-__all__ = [
-    "DeliveryCache",
-    "PushCommit",
-    "WebhookPayload",
-    "WebhookSettings",
-    "WorkType",
-    "classify_files",
-    "create_app",
-    "dispatch",
-    "verify_signature",
-]
+__all__ = ["WebhookSettings", "create_app"]

@@ -157,7 +157,7 @@ llm-automation/
 ├── docs/                              # Phase 별 산출물
 │   └── templates/                     #   요구사항/설계/테스트결과 양식
 │
-└── e2e/                               # (후속) 통합 시나리오 테스트
+└── e2e/                               # 통합 시나리오 테스트 (fixture 기반, Phase 6)
 ```
 
 ## 구현 로드맵
@@ -170,7 +170,7 @@ llm-automation/
 | 3 | `services/rag-seeder`, `services/rag-mcp` | ✅ 완료 |
 | 4 | `services/configaudit-mcp` | ✅ 완료 |
 | 5 | `services/flask-webhook`, `services/celery-comment`, `services/celery-configaudit` | ✅ 완료 |
-| 6 | `e2e/` 통합 테스트 | |
+| 6 | `libs/trigger-core` + `e2e/` 통합 테스트 (fixture 기반) | ✅ 완료 |
 
 ## 빠른 시작 (테스트 환경)
 

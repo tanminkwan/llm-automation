@@ -13,3 +13,6 @@ class CommentSettings(BaseSettings):
     agent_runner_kind: str = "opencode"
     agent_timeout_seconds: int = 300
     git_commit_author: str = "AI Bot <ai-bot@local>"
+    git_client: str = "subprocess"  # "subprocess" | "fixture"
+    fixture_source_dir: str = "/fixtures/source"
+    fixture_result_dir: str = "/fixtures/results"

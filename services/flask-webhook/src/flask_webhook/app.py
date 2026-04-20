@@ -1,4 +1,8 @@
-"""Flask 앱 팩토리 — webhook 수신 + HMAC 검증 + Celery 발행."""
+"""Flask 앱 팩토리 — HTTP 어댑터.
+
+핵심 로직(서명 검증·페이로드 파싱·work_type 판별·큐 발행) 은 ``trigger-core`` 에 위임한다.
+Flask 라우트는 HTTP ↔ TriggerEvent 번역만 담당한다.
+"""
 
 from __future__ import annotations
 
@@ -6,67 +10,73 @@ from typing import Any
 
 from celery import Celery  # type: ignore[import-untyped]
 from flask import Flask, Response, jsonify, request
+from trigger_core import (
+    CeleryTriggerDispatcher,
+    DeliveryCache,
+    InvalidPayloadError,
+    InvalidSignatureError,
+    TriggerDispatcher,
+    TriggerSource,
+    UnsupportedWorkTypeError,
+    WebhookTriggerSource,
+)
 
-from .dedup import DeliveryCache
-from .hmac_verify import verify_signature
-from .models import WebhookPayload
-from .router import classify_files, dispatch
 from .settings import WebhookSettings
 
 
 def create_app(
     *,
-    celery_app: Celery | None = None,
-    settings: WebhookSettings | None = None,
+    trigger_source: TriggerSource | None = None,
+    dispatcher: TriggerDispatcher | None = None,
     cache: DeliveryCache | None = None,
+    settings: WebhookSettings | None = None,
+    celery_app: Celery | None = None,
 ) -> Flask:
-    """팩토리 — 테스트 시 celery_app / cache 주입 (DIP)."""
+    """Flask 팩토리 — 모든 협력자는 Protocol DI.
+
+    편의: ``trigger_source`` 나 ``dispatcher`` 를 생략하면 ``settings`` 기반으로 기본 구현체
+    (``WebhookTriggerSource`` + ``CeleryTriggerDispatcher``) 를 자동 구성한다. 테스트는
+    ``celery_app`` 에 ``FakeCelery`` 를 주입하거나 ``dispatcher`` 를 직접 주입한다.
+    """
     _settings = settings or WebhookSettings()
-    _celery: Celery = celery_app or Celery(broker=_settings.celery_broker_url)
+    _source: TriggerSource = trigger_source or WebhookTriggerSource(secret=_settings.webhook_secret)
+    if dispatcher is None:
+        _celery = celery_app or Celery(broker=_settings.celery_broker_url)
+        _dispatcher: TriggerDispatcher = CeleryTriggerDispatcher(_celery)
+    else:
+        _dispatcher = dispatcher
     _cache = cache or DeliveryCache(ttl_seconds=_settings.dedup_ttl_seconds)
 
     app = Flask(__name__)
 
     @app.post("/webhook/push")
     def webhook_push() -> tuple[Response, int]:
-        # 1. HMAC 검증
-        signature = request.headers.get("X-Gitea-Signature", "")
-        if not verify_signature(request.data, signature, _settings.webhook_secret):
+        # 1. 파싱·검증 (서명 → 페이로드 → work_type) 을 TriggerSource 에 일괄 위임
+        try:
+            event = _source.parse(request.data, dict(request.headers))
+        except InvalidSignatureError:
             return jsonify({"error": "invalid signature"}), 401
+        except UnsupportedWorkTypeError:
+            return jsonify({"status": "skipped", "reason": "no matching files"}), 200
+        except InvalidPayloadError:
+            return jsonify({"error": "invalid payload"}), 400
 
-        # 2. 멱등키 확인
-        delivery_id = request.headers.get("X-Gitea-Delivery", "")
+        # 2. 멱등키 (파싱 성공 후에만 — HMAC 우회 방지)
+        delivery_id = str(event.meta.get("delivery_id", ""))
         if delivery_id and _cache.is_duplicate(delivery_id):
             return jsonify({"status": "duplicate"}), 200
 
-        # 3. 페이로드 파싱
-        data: dict[str, Any] = request.get_json(silent=True) or {}
-        payload = WebhookPayload(**data)
-        changed = payload.all_changed_files()
-
-        # 4. work_type 판별
-        work_type = classify_files(changed)
-        if work_type is None:
-            return jsonify({"status": "skipped", "reason": "no matching files"}), 200
-
-        # 5. Celery 발행
-        work_id = f"{payload.repo_full_name}:{payload.after[:8]}"
-        task_id = dispatch(
-            _celery,
-            work_type,
-            work_id=work_id,
-            repo_url=payload.repo_full_name,
-            clone_url=payload.clone_url,
-            ref=payload.ref,
-            changed_files=changed,
-        )
-
-        # 6. 멱등키 기록
+        # 3. 큐 발행
+        task_id = _dispatcher.dispatch(event)
         if delivery_id:
             _cache.mark(delivery_id)
 
         return jsonify(
-            {"status": "accepted", "task_id": task_id, "work_type": work_type.value}
+            {
+                "status": "accepted",
+                "task_id": task_id,
+                "work_type": event.work_type.value,
+            }
         ), 200
 
     @app.get("/health")
@@ -76,7 +86,18 @@ def create_app(
     return app
 
 
+def _main() -> None:  # pragma: no cover
+    settings = WebhookSettings()
+    app = create_app(settings=settings)
+    app.run(host=settings.webhook_host, port=settings.webhook_port)
+
+
 if __name__ == "__main__":  # pragma: no cover
-    _settings = WebhookSettings()
-    _app = create_app(settings=_settings)
-    _app.run(host=_settings.webhook_host, port=_settings.webhook_port)
+    _main()
+
+
+__all__: list[str] = ["create_app"]
+
+
+# mypy 상 Any 사용 표식 (celery.Celery 가 Any 로 해석됨 — 경고 방지)
+_ = Any

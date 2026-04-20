@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 
 [tool.uv.workspace]
-members = ["libs/*", "services/*"]
+members = ["libs/*", "services/*", "e2e"]
 
 [dependency-groups]
 dev = [

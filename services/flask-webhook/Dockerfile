@@ -10,7 +10,9 @@ WORKDIR /app
 FROM base AS builder
 COPY pyproject.toml ./
 COPY src/ src/
-RUN uv pip install --system . && \
+COPY --from=trigger-core-wheel /wheels/ /wheels/
+RUN uv pip install --system /wheels/*.whl && \
+    uv pip install --system . && \
     uv build --wheel
 
 # Stage 3: tester — 테스트 실행용

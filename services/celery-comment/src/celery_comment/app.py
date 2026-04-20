@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from celery import Celery  # type: ignore[import-untyped]
 
-from .git_ops import SubprocessGitClient
+from .factory import build_git_client
 from .settings import CommentSettings
 
 
@@ -22,12 +22,12 @@ def create_celery_app(settings: CommentSettings | None = None) -> Celery:
 
 # pragma: no cover — 운영 진입점
 def _build_app() -> Celery:  # pragma: no cover
-    """운영용 Celery app 조립."""
+    """운영용 Celery app 조립 — GIT_CLIENT 값에 따라 구현체 선택."""
     from .task import create_celery_task
 
     settings = CommentSettings()
     app = create_celery_app(settings)
-    git_client = SubprocessGitClient(author=settings.git_commit_author)
+    git_client = build_git_client(settings)
     # AgentRunner 는 host subprocess — 여기서는 stub
     # 실제 연동은 E2E Phase 에서 완성
     create_celery_task(
