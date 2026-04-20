@@ -8,8 +8,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
+from trigger_core import DeliveryCache
 
-from flask_webhook.dedup import DeliveryCache
 from flask_webhook.settings import WebhookSettings
 
 TEST_SECRET = "test-secret-key"
@@ -24,12 +24,16 @@ class FakeAsyncResult:
 
 @dataclass
 class FakeCelery:
-    """Celery send_task 기록용 fake."""
+    """Celery send_task 기록용 fake (CeleryTriggerDispatcher 호환)."""
 
     sent: list[dict[str, Any]] = field(default_factory=list)
 
     def send_task(
-        self, name: str, args: Any = None, kwargs: Any = None, queue: str = ""
+        self,
+        name: str,
+        *,
+        kwargs: dict[str, Any] | None = None,
+        queue: str = "",
     ) -> FakeAsyncResult:
         self.sent.append({"name": name, "kwargs": kwargs, "queue": queue})
         return FakeAsyncResult()
@@ -50,7 +54,10 @@ def make_push_payload(
     return {
         "ref": "refs/heads/main",
         "after": after,
-        "repository": {"full_name": repo_name, "clone_url": f"http://gitea:3000/{repo_name}.git"},
+        "repository": {
+            "full_name": repo_name,
+            "clone_url": f"http://gitea:3000/{repo_name}.git",
+        },
         "commits": [
             {
                 "id": after,

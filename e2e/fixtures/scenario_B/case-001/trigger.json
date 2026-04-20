@@ -1,0 +1,15 @@
+{
+  "work_type": "configaudit",
+  "work_id": "demo/config-repo:case-001",
+  "repo_ref": {
+    "full_name": "demo/config-repo",
+    "clone_url": "fixture://scenario_B/case-001/before",
+    "ref": "refs/heads/main"
+  },
+  "changed_files": ["conf/http.m"],
+  "meta": {
+    "scenario": "B",
+    "case": "case-001",
+    "description": "ConfigAudit — 3-way diff + anomaly 탐지 → AnalysisReport.md"
+  }
+}

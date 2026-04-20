@@ -9,7 +9,11 @@ dependencies = [
   "celery[redis]>=5.4",
   "pydantic>=2.7",
   "pydantic-settings>=2.4",
+  "trigger-core",
 ]
+
+[tool.uv.sources]
+trigger-core = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

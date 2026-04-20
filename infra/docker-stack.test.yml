@@ -99,15 +99,131 @@ services:
       timeout: 3s
       retries: 5
 
-  # ─── 후속 Phase 에서 추가될 서비스 (참고) ─────────────────
-  # rag-mcp:        (Phase 3) — 9001
-  # rag-seeder:     (Phase 3) — one-shot
-  # configaudit-mcp:(Phase 4) — 9002
-  # flask-webhook:  (Phase 5) — 8080
-  # celery-comment: (Phase 5)
-  # celery-configaudit: (Phase 5)
+  # ─── Phase 3: RAG ────────────────────────────────────────
+  rag-mcp:
+    image: rag-mcp:latest
+    ports:
+      - "9001:9001"
+    environment:
+      - EMBEDDING_BASE_URL=${EMBEDDING_BASE_URL}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
+      - EMBEDDING_API_KEY=${OPENAI_API_KEY}
+      - EMBEDDING_DIM=${EMBEDDING_DIM}
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      - qdrant
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == worker
+      replicas: 1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9001/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── Phase 4: ConfigAudit MCP ────────────────────────────
+  configaudit-mcp:
+    image: configaudit-mcp:latest
+    ports:
+      - "9002:9002"
+    environment:
+      - LEEBALSO_MOCK_URL=http://leebalso-mock:9100
+    depends_on:
+      - leebalso-mock
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == worker
+      replicas: 1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9002/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── Phase 5: Webhook Gateway ────────────────────────────
+  flask-webhook:
+    image: flask-webhook:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - WEBHOOK_HOST=0.0.0.0
+      - WEBHOOK_PORT=8080
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - DEDUP_TTL_SECONDS=${DEDUP_TTL_SECONDS}
+    depends_on:
+      - redis
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == worker
+      replicas: 1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── Phase 5: Comment Worker (Phase 6 에서 FixtureGitClient 지원) ──
+  celery-comment:
+    image: celery-comment:latest
+    command: ["celery", "-A", "celery_comment.app:celery_app", "worker", "-Q", "comment_queue", "-l", "info"]
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - COMMENT_WORK_DIR=${COMMENT_WORK_DIR}
+      - RAG_MCP_URL=${RAG_MCP_URL}
+      - AGENT_RUNNER_KIND=${AGENT_RUNNER_KIND}
+      - AGENT_TIMEOUT_SECONDS=${AGENT_TIMEOUT_SECONDS}
+      - GIT_COMMIT_AUTHOR=${GIT_COMMIT_AUTHOR}
+      - GIT_CLIENT=${GIT_CLIENT}
+      - FIXTURE_SOURCE_DIR=${FIXTURE_SOURCE_DIR}
+      - FIXTURE_RESULT_DIR=${FIXTURE_RESULT_DIR}
+      - CHAT_LLM_BASE_URL=${CHAT_LLM_BASE_URL}
+      - CHAT_LLM_MODEL=${CHAT_LLM_MODEL}
+      - CHAT_LLM_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - fixture-source:/fixtures/source
+      - fixture-results:/fixtures/results
+    depends_on:
+      - redis
+      - rag-mcp
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == worker
+      replicas: 1
+
+  # ─── Phase 5: ConfigAudit Worker ─────────────────────────
+  celery-configaudit:
+    image: celery-configaudit:latest
+    command: ["celery", "-A", "celery_configaudit.app:celery_app", "worker", "-Q", "configaudit_queue", "-l", "info"]
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - CONFIGAUDIT_MCP_URL=${CONFIGAUDIT_MCP_URL}
+      - REPORT_OUTPUT_DIR=${REPORT_OUTPUT_DIR}
+      - REASONING_LLM_BASE_URL=${REASONING_LLM_BASE_URL}
+      - REASONING_LLM_MODEL=${REASONING_LLM_MODEL}
+      - REASONING_LLM_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - report-data:/reports
+    depends_on:
+      - redis
+      - configaudit-mcp
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == worker
+      replicas: 1
 
 volumes:
   redis-data:
   qdrant-data:
   gitea-data:
+  fixture-source:
+  fixture-results:
+  report-data:

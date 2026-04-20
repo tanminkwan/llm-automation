@@ -1,15 +1,17 @@
 """HMAC-SHA256 서명 검증."""
 
+from __future__ import annotations
+
 import hashlib
 import hmac
 
 
 def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
-    """Gitea X-Gitea-Signature HMAC-SHA256 검증.
+    """Webhook 서명(HMAC-SHA256 hex digest) 을 상수시간 비교로 검증.
 
     Args:
         payload: 요청 body (raw bytes).
-        signature: X-Gitea-Signature 헤더 값 (hex digest).
+        signature: 헤더 값 (hex digest).
         secret: HMAC 시크릿.
 
     Returns:

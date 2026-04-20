@@ -1,0 +1,13 @@
+{
+  "description": "시나리오 A 의 구조적 기대치. LLM 자연어 내용은 검증하지 않음.",
+  "snapshot_root_env": "FIXTURE_RESULT_DIR",
+  "branch": "main",
+  "files": [
+    {
+      "path": "src/main/java/com/example/Calculator.java",
+      "javadoc_blocks_min_increase": 1,
+      "must_contain_identifiers": ["add", "subtract", "multiply", "divide"]
+    }
+  ],
+  "manifest_must_exist": true
+}

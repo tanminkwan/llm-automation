@@ -1,4 +1,4 @@
-"""멱등키 TTL 캐시 — X-Gitea-Delivery 중복 방지."""
+"""멱등키 TTL 캐시 — delivery_id 중복 방지."""
 
 from __future__ import annotations
 

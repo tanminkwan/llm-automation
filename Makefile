@@ -8,7 +8,7 @@ MEMBERS := libs/_template libs/llm-gateway
 # MEMBERS += libs/agent-runner
 # MEMBERS += services/leebalso-mock services/rag-mcp ...
 
-.PHONY: help sync test-all coverage-all lint-all format-all build-all image-all clean-all
+.PHONY: help sync test-all coverage-all lint-all format-all build-all image-all clean-all e2e e2e-offline
 
 help:
 	@echo "사용 가능한 타깃:"
@@ -67,3 +67,12 @@ clean-all:
 		echo "=== clean: $$m ==="; \
 		$(MAKE) -C $$m clean; \
 	done
+
+# ─── Phase 6: E2E ────────────────────────────────────────────
+# e2e-offline: fixture/CLI 구조적 검증만 (stack 불필요)
+# e2e:         실제 docker stack 기동 + 시나리오 A/B (OpenAI 호출)
+e2e-offline:
+	$(MAKE) -C e2e test-offline
+
+e2e:
+	$(MAKE) -C e2e e2e

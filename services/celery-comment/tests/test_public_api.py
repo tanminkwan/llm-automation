@@ -8,9 +8,11 @@ class TestPublicAPI:
         from celery_comment import (
             CommentResult,
             CommentSettings,
+            FixtureGitClient,
             GitClient,
             SubprocessGitClient,
             TaskPayload,
+            build_git_client,
             build_prompt,
             celery_app,
             create_celery_app,
@@ -22,9 +24,11 @@ class TestPublicAPI:
             [
                 CommentResult,
                 CommentSettings,
+                FixtureGitClient,
                 GitClient,
                 SubprocessGitClient,
                 TaskPayload,
+                build_git_client,
                 build_prompt,
                 celery_app,
                 create_celery_app,

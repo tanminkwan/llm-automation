@@ -17,10 +17,16 @@ class TestCommentSettings:
         monkeypatch.setenv("AGENT_RUNNER_KIND", "claude")
         monkeypatch.setenv("AGENT_TIMEOUT_SECONDS", "600")
         monkeypatch.setenv("GIT_COMMIT_AUTHOR", "Bot <b@b>")
+        monkeypatch.setenv("GIT_CLIENT", "fixture")
+        monkeypatch.setenv("FIXTURE_SOURCE_DIR", "/opt/fx/src")
+        monkeypatch.setenv("FIXTURE_RESULT_DIR", "/opt/fx/res")
         s = CommentSettings()
         assert s.celery_broker_url == "redis://remote:6379/5"
         assert s.comment_work_dir == "/opt/work"
         assert s.agent_runner_kind == "claude"
+        assert s.git_client == "fixture"
+        assert s.fixture_source_dir == "/opt/fx/src"
+        assert s.fixture_result_dir == "/opt/fx/res"
 
     def test_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """T-09: 기본값."""
@@ -32,8 +38,12 @@ class TestCommentSettings:
             "AGENT_RUNNER_KIND",
             "AGENT_TIMEOUT_SECONDS",
             "GIT_COMMIT_AUTHOR",
+            "GIT_CLIENT",
+            "FIXTURE_SOURCE_DIR",
+            "FIXTURE_RESULT_DIR",
         ]:
             monkeypatch.delenv(key, raising=False)
         s = CommentSettings()
         assert s.celery_broker_url == "redis://localhost:6379/0"
         assert s.agent_timeout_seconds == 300
+        assert s.git_client == "subprocess"

@@ -1,0 +1,14 @@
+{
+  "work_type": "comment",
+  "work_id": "demo/seed-repo:a1b2c3d4",
+  "repo_ref": {
+    "full_name": "demo/seed-repo",
+    "clone_url": "fixture://scenario_A/before",
+    "ref": "refs/heads/main"
+  },
+  "changed_files": ["src/main/java/com/example/Calculator.java"],
+  "meta": {
+    "scenario": "A",
+    "description": "Java source — javadoc 주석 블록이 추가되어야 함"
+  }
+}
